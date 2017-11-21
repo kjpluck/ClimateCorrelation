@@ -60,6 +60,53 @@ std::map<string, float>  DataLoader::loadMonthlySeaLevelData1880() {
 		sprintf(date, "%04d-%02d", year, month);
 		co2Data[date] = seaLevel;
 	}
+
+	input.close();
+
+
+	// The data in sl_global.txt is sampled every ~10 days so we take a monthly average.
+
+	ifstream input2("data\\sl_global.txt");
+	int previousMonth = 12;
+	int valuesInMonth = 0;
+	float accumSeaLevel = 0.0f;
+	for (string line; getline(input2, line);) {
+		if (line[0] == 'y')
+			continue;
+
+		istringstream iss(line);
+		float time2;
+		iss >> time2 >> seaLevel;
+
+		// Skip overlap from CSIRO_Recons_gmsl_mo_2015.txt
+		if (time2 < time)
+			continue;
+
+		int month = (time2 - (int)time2) * 12 + 1;
+		if (month == previousMonth) {
+			valuesInMonth++;
+			accumSeaLevel += seaLevel;
+			continue;
+		}
+		
+		float averageSeaLevel = accumSeaLevel / valuesInMonth;
+
+		char date[8];
+		int year = time2;
+		
+		if (previousMonth == 12)
+			year--;
+
+		sprintf(date, "%04d-%02d", year, previousMonth);
+		co2Data[date] = averageSeaLevel;
+
+		previousMonth = month;
+		valuesInMonth = 1;
+		accumSeaLevel = seaLevel;
+	}
+
+	input2.close();
+
 	return co2Data;
 }
 
