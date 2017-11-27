@@ -111,9 +111,11 @@
   <ItemGroup>
     <ClCompile Include="..\src\ClimateCorrelationApp.cpp" />
     <ClCompile Include="..\src\DataLoader.cpp" />
+    <ClCompile Include="..\src\Lerp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\DataLoader.h" />
+    <ClInclude Include="..\include\Lerp.h" />
     <ClInclude Include="..\include\Resources.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

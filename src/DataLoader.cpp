@@ -154,6 +154,9 @@ std::map<string, float> DataLoader::loadMonthlyTemperature1880() {
 		vector<string> values = split(line, ',');
 		int year = atoi(values.at(0).c_str());
 		for (int month = 1; month <= 12; month++) {
+			if (year == 2017 && month > 9)
+				continue;
+
 			temperature = strtof(values.at(month).c_str(), 0);
 			char date[8];
 			sprintf(date, "%04d-%02d", year, month);
@@ -163,6 +166,52 @@ std::map<string, float> DataLoader::loadMonthlyTemperature1880() {
 	}
 	input.close();
 	return temperatureData;
+}
+
+std::map<string, float> DataLoader::loadDailyArcticIceArea1978() {
+	map<string, float> arcticData;
+
+	ifstream input("data\\nsidc_NH_SH_nt_final_and_nrt.txt");
+	if (!input)
+		return arcticData;
+
+	float area;
+	for (string line; getline(input, line);) {
+		if (line[0] == ' ' || line[0] == '#' || line[0] == '\t')
+			continue;
+
+		vector<string> values = split(line, ',');
+		vector<string> date = split(values.at(0), ' ');
+
+		area = strtof(values.at(7).c_str(), 0);
+		arcticData[date.at(0)] = area;
+
+	}
+	input.close();
+	return arcticData;
+}
+
+std::map<string, float> DataLoader::loadDailyAntarcticIceArea1978() {
+	map<string, float> antarcticData;
+
+	ifstream input("data\\nsidc_NH_SH_nt_final_and_nrt.txt");
+	if (!input)
+		return antarcticData;
+
+	float area;
+	for (string line; getline(input, line);) {
+		if (line[0] == ' ' || line[0] == '#' || line[0] == '\t')
+			continue;
+
+		vector<string> values = split(line, ',');
+		vector<string> date = split(values.at(0), ' ');
+
+		area = strtof(values.at(9).c_str(), 0);
+		antarcticData[date.at(0)] = area;
+
+	}
+	input.close();
+	return antarcticData;
 }
 
 std::vector<std::string> DataLoader::split(const std::string &text, char sep) {
