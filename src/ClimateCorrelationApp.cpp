@@ -1,6 +1,7 @@
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
+#include "cinder\CinderGlm.h"
 #include <fstream>
 #include <math.h>
 
@@ -58,6 +59,8 @@ private:
 	float barrelRadius;
 	void drawBarrel(vector<BarrelSegment>, float x, float y, float z, float scale);
 	void drawCo2Cylinder(vector<Co2Segment> cylinder, float x, float y, float z, float scale);
+	void setPixels(Surface * surface, int from, int to, Color8u color);
+	void drawText(vec3 position, float angle, const std::string text);
 };
 
 
@@ -90,7 +93,6 @@ void ClimateCorrelationApp::setup()
 	gl::enableDepthRead();
 	gl::enableDepthWrite();
 
-
 	mCamera.setPerspective(50.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
 	//mCamera.lookAt(vec3(0, 15, 30), vec3(0, 0, 0));
 
@@ -119,7 +121,8 @@ void ClimateCorrelationApp::update()
 	float time = elapsedTime * 2.0f + 1850.0f;
 	
 	float animationFraction =  (time - 1850.0f)/(2017.0f - 1850.0f);
-	Color lineColor = Lerp::interpolate(Color(0, 0, 0.5f), Color(1, 1, 1), animationFraction);
+	// 117,107,177 -> 239,237,245
+	Color lineColor = Lerp::interpolate(Color(117.0/255.0, 107.0/255.0 , 177.0/255.0), Color(239.0/255.0, 237.0/255.0, 245.0/255.0), animationFraction);
 
 	Date theDate = GetDayFromFractionalYear(time);
 	float angleInBarrel = (theDate.month / 12.0f) * 2 * M_PI;
@@ -163,7 +166,9 @@ void ClimateCorrelationApp::update()
 
 		}
 	}
-	
+
+	lineColor = Lerp::interpolate(Color(49.0 / 255.0, 163.0 / 255.0, 84.0 / 255.0), Color(229.0 / 255.0, 245.0 / 255.0, 224.0 / 255.0), animationFraction);
+
 	if (theDate.year >= 1880 && yearMonthHasChanged) {
 
 		if (monthlyTemperatureData1880.count(yearMonth) == 1) {
@@ -180,7 +185,9 @@ void ClimateCorrelationApp::update()
 	angleInBarrel = (time - (int)time) * 2 * M_PI;
 	if (yearMonthDayHasChanged && theDate.year >= 1978) {
 		animationFraction = (time - 1978.0f) / (2017.0f - 1978.0f);
-		lineColor = Lerp::interpolate(Color(0, 0, 0.5f), Color(1, 1, 1), animationFraction);
+
+		// 49,130,189 -> 222,235,247
+		lineColor = Lerp::interpolate(Color(49.0 / 255.0, 130.0 / 255.0, 189.0 / 255.0), Color(222.0 / 255.0, 235.0 / 255.0, 247.0 / 255.0), animationFraction);
 
 		if (dailyArcticAreaData1978.count(yearMonthDay) == 1) {
 			BarrelSegment arcticAreaSegment = { angleInBarrel, dailyArcticAreaData1978[yearMonthDay], 1, lineColor };
@@ -198,7 +205,8 @@ void ClimateCorrelationApp::update()
 	else
 		sprintf(txt, "%04d/%02d", theDate.year, theDate.month);
 
-	TextBox tbox = TextBox().font(mFont).text(txt);
+	TextBox tbox = TextBox().font(mFont).text(txt).size(400,40);
+	
 	mTextTexture = gl::Texture2d::create(tbox.render());
 
 	if (yearMonthHasChanged)
@@ -234,13 +242,18 @@ void ClimateCorrelationApp::draw()
 	drawBarrel(arcticSeaIceBarrel, -50.0, arcticOffSet, 0, arcticScale);
 	drawBarrel(antarcticSeaIceBarrel, 50.0, arcticOffSet, 0, arcticScale);
 
+	drawText(vec3(0, 5, 0), 2, "hello world");
+
 	gl::setMatricesWindow(getWindowSize());
 	gl::color(1, 1, 1);
 	gl::draw(mTextTexture, vec2(10,10));
 	
+
 	//std::experimental::filesystem::v1::path p("frames/frame");
 	//writeImage( ("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
 }
+
+
 
 void ClimateCorrelationApp::drawBarrel(vector<BarrelSegment> barrel, float x, float y, float z, float scale) {
 
@@ -270,21 +283,69 @@ void ClimateCorrelationApp::drawBarrel(vector<BarrelSegment> barrel, float x, fl
 void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x, float y, float z, float scale) {
 
 	Co2Segment lastCo2Segment;
+
+	float currentMaxCo2 = 0;
+	for (auto &cylinderSegment : cylinder) {
+		if (cylinderSegment.height > currentMaxCo2)
+			currentMaxCo2 = cylinderSegment.height;
+	}
+
+	Surface co2TimeGradient(1, currentMaxCo2, false);
+
 	bool first = true;
 	for (auto &cylinderSegment : cylinder) {
 		if (first) {
-			lastCo2Segment = Co2Segment{ 0, Color(0,0,0) };
+			lastCo2Segment = Co2Segment{ 0, Color(117.0 / 255.0, 107.0 / 255.0 , 177.0 / 255.0) };
+			setPixels(&co2TimeGradient, 0, lastCo2Segment.height, lastCo2Segment.color);
 			first = false;
 		}
 
-		cinder::geom::Cylinder co2Cylinder = cinder::geom::Cylinder();
-		gl::color(cylinderSegment.color);
-		co2Cylinder.set(vec3(x, lastCo2Segment.height * scale + y, z), vec3(x, cylinderSegment.height * scale + y, z));
-		co2Cylinder.radius(10);
-		gl::draw(co2Cylinder);
+		setPixels(&co2TimeGradient, lastCo2Segment.height, cylinderSegment.height, cylinderSegment.color);
 
 		lastCo2Segment = cylinderSegment;
 	}
+
+	auto co2TimeTexture = ci::gl::Texture::create(co2TimeGradient);
+	co2TimeTexture->bind();
+
+	auto shader = gl::ShaderDef().texture();
+	gl::GlslProgRef glsl = gl::getStockShader(shader);
+	
+	cinder::geom::Cylinder co2Cylinder = cinder::geom::Cylinder();
+	co2Cylinder.set(vec3(x, 0 + y, z), vec3(x, currentMaxCo2 * scale + y, z));
+	co2Cylinder.radius(10);
+
+	gl::BatchRef cylinderBatch = gl::Batch::create(co2Cylinder, glsl);
+	cylinderBatch->draw();
+
+	
+}
+
+void ClimateCorrelationApp::setPixels(Surface *surface, int from, int to, Color8u color) {
+	for (int i = from; i <= to; i++) {
+		surface->setPixel(vec2(0, i), color);
+	}
+}
+
+void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text)
+{
+	TextBox tbox = TextBox().font(mFont).text(text);
+	gl::TextureRef textTexture = gl::Texture2d::create(tbox.render());
+	textTexture->bind();
+	vec2 textBoxSize = tbox.measure() * 0.1f;
+
+
+	gl::pushMatrices();
+	gl::rotate(angleAxis(angle,vec3(0,1,0)));
+	gl::translate(position);
+	gl:rotate(2.0f, vec3(1, 0, 0));
+	gl::scale(vec2(1, -1));
+	auto shader = gl::ShaderDef().texture();// .lambert();
+	gl::GlslProgRef glsl = gl::getStockShader(shader);
+	auto plane = geom::Rect().rect(Rectf(0, 0, textBoxSize.x, textBoxSize.y));
+	gl::BatchRef planeBatch = gl::Batch::create(plane, glsl);
+	planeBatch->draw();
+	gl::popMatrices();
 }
 
 
