@@ -20,6 +20,7 @@ class ClimateCorrelationApp : public App {
 	  void setup() override;
 	void update() override;
 	void draw() override;
+	void drawCitations();
 	CameraPersp		mCamera;
 private:
 	map<string, float> annualCo2Data1850;
@@ -74,6 +75,8 @@ private:
 	float mCurrentArcticSeaIceMaximum;
 	float mCurrentAntarcticSeaIceMinimum;
 	float mCurrentAntarcticSeaIceMaximum;
+
+	string mCitations;
 };
 
 
@@ -116,6 +119,8 @@ void ClimateCorrelationApp::setup()
 	monthlySeaLevelData1880 = DataLoader::loadMonthlySeaLevelData1880();
 	dailyArcticAreaData1978 = DataLoader::loadDailyArcticIceArea1978();
 	dailyAntarcticAreaData1978 = DataLoader::loadDailyAntarcticIceArea1978();
+	mCitations = DataLoader::loadCitations();
+
 	mFont = Font("Arial", 32);
 
 	barrelRadius = 9;
@@ -299,7 +304,7 @@ void ClimateCorrelationApp::draw()
 
 	drawText(vec3(0, mTitlePosition, -0.01), 0, "Carbon Dioxide\nConcentration (ppm)\n" + std::to_string(mYear) );
 	if (temperatureBarrel.size() > 0) {
-		drawText(vec3(25, mTitlePosition, -0.01), 0, "Global Temperature\nAnomaly (deg. C)\n1951-1980 mean");
+		drawText(vec3(25, mTitlePosition, -0.01), 0, "Global Temperature\n1951-1980 mean\n(deg. C)");
 		drawTemperatureGraduations(25, temperatureOffSet, 0, mCurrentMaxTemperature, temperatureScale);
 	}
 	if (seaLevelBarrel.size() > 0) {
@@ -318,9 +323,20 @@ void ClimateCorrelationApp::draw()
 	gl::setMatricesWindow(getWindowSize());
 	gl::color(1, 1, 1);
 	gl::draw(mTextTexture, vec2(10, getWindowSize().y - 35));
+
+	if (getElapsedFrames() > 2700)
+		drawCitations();
 }
 
+void ClimateCorrelationApp::drawCitations() {
+	TextBox tbox = TextBox().font(mFont).text(mCitations).size(1720, 880).alignment(TextBox::CENTER);
+	tbox.setColor(Color(1, 1, 1));
+	tbox.setBackgroundColor(ColorA(0, 0, 0, 0.5));
 
+
+	gl::Texture2dRef textTexture = gl::Texture2d::create(tbox.render());
+	gl::draw(textTexture, vec2(100, 100));
+}
 
 void ClimateCorrelationApp::drawBarrel(vector<BarrelSegment> barrel, float x, float y, float z, float scale) {
 

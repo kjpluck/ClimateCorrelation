@@ -243,3 +243,14 @@ std::string &DataLoader::rtrim(std::string &s) {
 std::string &DataLoader::trim(std::string &s) {
 	return ltrim(rtrim(s));
 }
+
+std::string DataLoader::loadCitations() {
+	ifstream input("data\\citations.txt");
+	string toReturn;
+
+	for (string line; getline(input, line);) {
+		toReturn += line + "\n";
+	}
+
+	return toReturn;
+}
