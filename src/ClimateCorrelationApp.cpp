@@ -33,11 +33,11 @@ private:
 	float seaLevel;
 	gl::TextureRef		mTextTexture;
 	Font				mFont;
-	float co2CylinderHeight;
 	string previousYearMonth;
 	string previousYearMonthDay;
 	float mTitlePosition;
 	int mYear;
+	float mCurrentMaxCo2;
 
 	struct BarrelSegment {
 		float angle;
@@ -61,8 +61,9 @@ private:
 	float barrelRadius;
 	void drawBarrel(vector<BarrelSegment>, float x, float y, float z, float scale);
 	void drawCo2Cylinder(vector<Co2Segment> cylinder, float x, float y, float z, float scale);
+	void drawCo2Gradutations(float x, float y, float z, float scale);
 	void setPixels(Surface * surface, int from, int to, Color8u color);
-	void drawText(vec3 position, float angle, const std::string text);
+	void drawText(vec3 position, float angle, const std::string text, float = 1.0f);
 };
 
 
@@ -108,6 +109,7 @@ void ClimateCorrelationApp::setup()
 	mFont = Font("Arial", 32);
 
 	barrelRadius = 10;
+	mCurrentMaxCo2 = 0.0;
 }
 
 
@@ -139,14 +141,18 @@ void ClimateCorrelationApp::update()
 	bool yearMonthHasChanged = yearMonth != previousYearMonth;
 	bool yearMonthDayHasChanged = yearMonthDay != previousYearMonthDay;
 
+	float theCo2ppm = 0;
+
 	if (theDate.year < 1958){
-		co2CylinderHeight = annualCo2Data1850[to_string(theDate.year)];
-		Co2Segment co2Segment = { co2CylinderHeight, lineColor };
+		float co2ppm = annualCo2Data1850[to_string(theDate.year)];
+		theCo2ppm = annualCo2Data1850[to_string(theDate.year)];
+		Co2Segment co2Segment = { co2ppm, lineColor };
 		co2Cylinder.push_back(co2Segment);
 	}
 	else {
 		if (yearMonthHasChanged) {
 			float co2ppm = monthlyCo2Data1958[yearMonth];
+			theCo2ppm = monthlyCo2Data1958[yearMonth];
 			if (co2ppm > 0) {
 				BarrelSegment barrelSegment = { angleInBarrel, co2ppm, 1, lineColor };
 				co2Barrel.push_back(barrelSegment);
@@ -170,6 +176,10 @@ void ClimateCorrelationApp::update()
 		}
 	}
 	
+	if (theCo2ppm > mCurrentMaxCo2)
+		mCurrentMaxCo2 = theCo2ppm;
+
+
 	lineColor = Lerp::interpolate(Color(49.0 / 255.0, 163.0 / 255.0, 84.0 / 255.0), Color(229.0 / 255.0, 245.0 / 255.0, 224.0 / 255.0), animationFraction);
 
 	if (theDate.year >= 1880 && yearMonthHasChanged) {
@@ -233,6 +243,7 @@ void ClimateCorrelationApp::draw()
 	float co2OffSet = -315 * co2Scale;
 
 	drawCo2Cylinder(co2Cylinder, 0, co2OffSet, 0, co2Scale);
+	drawCo2Gradutations(0, co2OffSet, 0, co2Scale);
 
 	float temperatureScale = 37.0;
 	float temperatureOffSet = 0.8 * temperatureScale - 30.0f;
@@ -291,14 +302,12 @@ void ClimateCorrelationApp::drawBarrel(vector<BarrelSegment> barrel, float x, fl
 void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x, float y, float z, float scale) {
 
 	Co2Segment lastCo2Segment;
-	float currentMaxCo2 = 0;
-	for (auto &cylinderSegment : cylinder) {
-		if (cylinderSegment.height > currentMaxCo2)
-			 currentMaxCo2 = cylinderSegment.height;
-		
-	}
-	
-	Surface co2TimeGradient(1, currentMaxCo2, false);
+	float iceCoreCo2Max = 315.3;
+
+	if (mYear < 1958)
+		iceCoreCo2Max = mCurrentMaxCo2;
+
+	Surface co2TimeGradient(1, iceCoreCo2Max, false);
 
 	bool first = true;
 	for (auto &cylinderSegment : cylinder) {
@@ -320,13 +329,19 @@ void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x
 	gl::GlslProgRef glsl = gl::getStockShader(shader);
 	
 	cinder::geom::Cylinder co2Cylinder = cinder::geom::Cylinder();
-	co2Cylinder.set(vec3(x, 0 + y, z), vec3(x, currentMaxCo2 * scale + y, z));
+	co2Cylinder.set(vec3(x, 0 + y, z), vec3(x, iceCoreCo2Max * scale + y, z));
 	co2Cylinder.radius(10);
 
 	gl::BatchRef cylinderBatch = gl::Batch::create(co2Cylinder, glsl);
 	cylinderBatch->draw();
-
 	
+}
+
+void ClimateCorrelationApp::drawCo2Gradutations(float x, float y, float z, float scale) {
+
+	for (int co2Graduation = 250; co2Graduation < mCurrentMaxCo2; co2Graduation += 10) {
+		drawText(vec3(x + 12.0f, co2Graduation * scale + y, z), 0, std::to_string(co2Graduation), 0.7f);
+	}
 }
 
 void ClimateCorrelationApp::setPixels(Surface *surface, int from, int to, Color8u color) {
@@ -335,12 +350,12 @@ void ClimateCorrelationApp::setPixels(Surface *surface, int from, int to, Color8
 	}
 }
 
-void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text)
+void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text, float scale)
 {
 	TextBox tbox = TextBox().alignment(TextBox::CENTER).font(mFont).text(text);
 	gl::TextureRef textTexture = gl::Texture2d::create(tbox.render());
 	textTexture->bind();
-	vec2 textBoxSize = tbox.measure() * 0.1f;
+	vec2 textBoxSize = tbox.measure() * 0.1f * scale;
 
 
 	gl::pushMatrices();
