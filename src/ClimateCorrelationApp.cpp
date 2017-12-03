@@ -106,6 +106,7 @@ Date GetDayFromFractionalYear(float time) {
 
 void ClimateCorrelationApp::setup()
 {
+	setFullScreen(true);
 	gl::enableDepthRead();
 	gl::enableDepthWrite();
 
@@ -326,6 +327,8 @@ void ClimateCorrelationApp::draw()
 
 	if (getElapsedFrames() > 2700)
 		drawCitations();
+
+	//writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
 }
 
 void ClimateCorrelationApp::drawCitations() {
