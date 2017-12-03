@@ -61,9 +61,19 @@ private:
 	float barrelRadius;
 	void drawBarrel(vector<BarrelSegment>, float x, float y, float z, float scale);
 	void drawCo2Cylinder(vector<Co2Segment> cylinder, float x, float y, float z, float scale);
+	void drawSeaIceGraduations(float x, float y, float z, float minimum, float maximum, float scale);
+	void drawTemperatureGraduations(float x, float y, float z, float maximum, float scale);
+	void drawSeaLevelGraduations(float x, float y, float z, float maximum, float scale);
 	void drawCo2Gradutations(float x, float y, float z, float scale);
 	void setPixels(Surface * surface, int from, int to, Color8u color);
-	void drawText(vec3 position, float angle, const std::string text, float = 1.0f);
+	void drawText(vec3 position, float angle, const std::string text, float = 1.0f, TextBox::Alignment = TextBox::CENTER);
+
+	float mCurrentMaxSeaLevel;
+	float mCurrentMaxTemperature;
+	float mCurrentArcticSeaIceMinimum;
+	float mCurrentArcticSeaIceMaximum;
+	float mCurrentAntarcticSeaIceMinimum;
+	float mCurrentAntarcticSeaIceMaximum;
 };
 
 
@@ -108,8 +118,15 @@ void ClimateCorrelationApp::setup()
 	dailyAntarcticAreaData1978 = DataLoader::loadDailyAntarcticIceArea1978();
 	mFont = Font("Arial", 32);
 
-	barrelRadius = 10;
+	barrelRadius = 9;
 	mCurrentMaxCo2 = 0.0;
+	mCurrentMaxSeaLevel = -1000;
+	mCurrentMaxTemperature = -1000;
+
+	mCurrentAntarcticSeaIceMaximum = -1000;
+	mCurrentAntarcticSeaIceMinimum = 1000;
+	mCurrentArcticSeaIceMaximum = -1000;
+	mCurrentArcticSeaIceMinimum = 1000;
 }
 
 
@@ -185,11 +202,21 @@ void ClimateCorrelationApp::update()
 	if (theDate.year >= 1880 && yearMonthHasChanged) {
 
 		if (monthlyTemperatureData1880.count(yearMonth) == 1) {
+			
+			float theTemperature = monthlyTemperatureData1880[yearMonth];
+			if (theTemperature > mCurrentMaxTemperature)
+				mCurrentMaxTemperature = theTemperature;
+
 			BarrelSegment temperatureSegment = { angleInBarrel, monthlyTemperatureData1880[yearMonth], 1, lineColor };
 			temperatureBarrel.push_back(temperatureSegment);
 		}
 
 		if (monthlySeaLevelData1880.count(yearMonth) == 1) {
+
+			float theSeaLevel = monthlySeaLevelData1880[yearMonth];
+			if (theSeaLevel > mCurrentMaxSeaLevel)
+				mCurrentMaxSeaLevel = theSeaLevel;
+			
 			BarrelSegment seaLevelSegment = { angleInBarrel, monthlySeaLevelData1880[yearMonth], 1, lineColor };
 			seaLevelBarrel.push_back(seaLevelSegment);
 		}
@@ -203,10 +230,24 @@ void ClimateCorrelationApp::update()
 		lineColor = Lerp::interpolate(Color(49.0 / 255.0, 130.0 / 255.0, 189.0 / 255.0), Color(222.0 / 255.0, 235.0 / 255.0, 247.0 / 255.0), animationFraction);
 
 		if (dailyArcticAreaData1978.count(yearMonthDay) == 1) {
+
+			float theArea = dailyArcticAreaData1978[yearMonthDay];
+			if (theArea > mCurrentArcticSeaIceMaximum)
+				mCurrentArcticSeaIceMaximum = theArea;
+			if (theArea < mCurrentArcticSeaIceMinimum)
+				mCurrentArcticSeaIceMinimum = theArea;
+
 			BarrelSegment arcticAreaSegment = { angleInBarrel, dailyArcticAreaData1978[yearMonthDay], 1, lineColor };
 			arcticSeaIceBarrel.push_back(arcticAreaSegment);
 		}
 		if (dailyAntarcticAreaData1978.count(yearMonthDay) == 1) {
+
+			float theArea = dailyAntarcticAreaData1978[yearMonthDay];
+			if (theArea > mCurrentAntarcticSeaIceMaximum)
+				mCurrentAntarcticSeaIceMaximum = theArea;
+			if (theArea < mCurrentAntarcticSeaIceMinimum)
+				mCurrentAntarcticSeaIceMinimum = theArea;
+
 			BarrelSegment antarcticAreaSegment = { angleInBarrel, dailyAntarcticAreaData1978[yearMonthDay], 1, lineColor };
 			antarcticSeaIceBarrel.push_back(antarcticAreaSegment);
 		}
@@ -260,15 +301,23 @@ void ClimateCorrelationApp::draw()
 	drawBarrel(arcticSeaIceBarrel, -50.0, arcticOffSet, 0, arcticScale);
 	drawBarrel(antarcticSeaIceBarrel, 50.0, arcticOffSet, 0, arcticScale);
 
-	drawText(vec3(0, mTitlePosition, 0), 0, "Carbon Dioxide\nConcentration\n" + std::to_string(mYear) );
-	if (temperatureBarrel.size() > 0)
+	drawText(vec3(0, mTitlePosition, 0), 0, "Carbon Dioxide\nConcentration (ppm)\n" + std::to_string(mYear) );
+	if (temperatureBarrel.size() > 0) {
 		drawText(vec3(25, mTitlePosition, 0), 0, "Global Temperature");
-	if (seaLevelBarrel.size() > 0)
-		drawText(vec3(-25, mTitlePosition, 0), 0, "Global Sea Level");
-	if (arcticSeaIceBarrel.size() > 0)
+		drawTemperatureGraduations(25, temperatureOffSet, 0, mCurrentMaxTemperature, temperatureScale);
+	}
+	if (seaLevelBarrel.size() > 0) {
+		drawText(vec3(-25, mTitlePosition, 0), 0, "Global Sea Level\n(mm)");
+		drawSeaLevelGraduations(-25, seaLevelOffSet, 0, mCurrentMaxSeaLevel, seaLevelScale);
+	}
+	if (arcticSeaIceBarrel.size() > 0) {
 		drawText(vec3(-50, mTitlePosition, 0), 0, "Arctic Sea Ice\nAnomaly");
-	if (antarcticSeaIceBarrel.size() > 0)
+		drawSeaIceGraduations(-50, arcticOffSet, 0, mCurrentArcticSeaIceMinimum, mCurrentArcticSeaIceMaximum, arcticScale);
+	}
+	if (antarcticSeaIceBarrel.size() > 0) {
 		drawText(vec3(50, mTitlePosition, 0), 0, "Antarctic Sea Ice\nAnomaly");
+		drawSeaIceGraduations(51, arcticOffSet, 0, mCurrentAntarcticSeaIceMinimum, mCurrentAntarcticSeaIceMaximum, arcticScale);
+	}
 }
 
 
@@ -330,11 +379,44 @@ void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x
 	
 	cinder::geom::Cylinder co2Cylinder = cinder::geom::Cylinder();
 	co2Cylinder.set(vec3(x, 0 + y, z), vec3(x, iceCoreCo2Max * scale + y, z));
-	co2Cylinder.radius(10);
+	co2Cylinder.radius(barrelRadius);
 
 	gl::BatchRef cylinderBatch = gl::Batch::create(co2Cylinder, glsl);
 	cylinderBatch->draw();
 	
+}
+
+void ClimateCorrelationApp::drawSeaIceGraduations(float x, float y, float z, float minimum, float maximum, float scale) {
+
+	int min = minimum * 100;
+	int toNearest50 = min % 50;
+	min -= toNearest50;
+
+	int max = maximum * 100;
+
+	for (int graduation = min; graduation < max; graduation += 50) {
+		char value[10];
+		sprintf(value, "%4d", graduation);
+		drawText(vec3(x + 12.0f, graduation * (scale / 100.0) + y, z), 0, value, 0.7f, TextBox::RIGHT);
+	}
+}
+
+void ClimateCorrelationApp::drawTemperatureGraduations(float x, float y, float z, float maximum, float scale) {
+
+	for (float graduation = -0.8; graduation < maximum; graduation += 0.1) {
+		char value[10];
+		sprintf(value, "%.1f", graduation);
+		drawText(vec3(x + 12.0f, graduation * scale + y, z), 0, value, 0.7f, TextBox::RIGHT);
+	}
+}
+
+void ClimateCorrelationApp::drawSeaLevelGraduations(float x, float y, float z, float maximum, float scale) {
+	
+	for (int graduation = -180; graduation < maximum; graduation += 20) {
+		char value[10];
+		sprintf(value, "%4d", graduation);
+		drawText(vec3(x + 12.0f, graduation * scale + y, z), 0, value, 0.7f, TextBox::RIGHT);
+	}
 }
 
 void ClimateCorrelationApp::drawCo2Gradutations(float x, float y, float z, float scale) {
@@ -350,9 +432,9 @@ void ClimateCorrelationApp::setPixels(Surface *surface, int from, int to, Color8
 	}
 }
 
-void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text, float scale)
+void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text, float scale, TextBox::Alignment alignment)
 {
-	TextBox tbox = TextBox().alignment(TextBox::CENTER).font(mFont).text(text);
+	TextBox tbox = TextBox().alignment(alignment).font(mFont).text(text);
 	gl::TextureRef textTexture = gl::Texture2d::create(tbox.render());
 	textTexture->bind();
 	vec2 textBoxSize = tbox.measure() * 0.1f * scale;
