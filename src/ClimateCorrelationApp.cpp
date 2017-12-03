@@ -253,17 +253,13 @@ void ClimateCorrelationApp::update()
 		}
 
 	}
-	char *txt;
-	if (theDate.year * 100 + theDate.month > 201710) {
-		txt = "2017/11";
+	
+	if (theDate.year * 100 + theDate.month > 201710)
 		mYear = 2017;
-	}
-	else {
-		sprintf(txt, "%04d/%02d", theDate.year, theDate.month);
+	else
 		mYear = theDate.year;
-	}
 
-	TextBox tbox = TextBox().font(mFont).text(txt).size(400,40);
+	TextBox tbox = TextBox().font(mFont).text("@kevpluck").size(400,40);
 	
 	mTextTexture = gl::Texture2d::create(tbox.render());
 
@@ -301,23 +297,27 @@ void ClimateCorrelationApp::draw()
 	drawBarrel(arcticSeaIceBarrel, -50.0, arcticOffSet, 0, arcticScale);
 	drawBarrel(antarcticSeaIceBarrel, 50.0, arcticOffSet, 0, arcticScale);
 
-	drawText(vec3(0, mTitlePosition, 0), 0, "Carbon Dioxide\nConcentration (ppm)\n" + std::to_string(mYear) );
+	drawText(vec3(0, mTitlePosition, -0.01), 0, "Carbon Dioxide\nConcentration (ppm)\n" + std::to_string(mYear) );
 	if (temperatureBarrel.size() > 0) {
-		drawText(vec3(25, mTitlePosition, 0), 0, "Global Temperature");
+		drawText(vec3(25, mTitlePosition, -0.01), 0, "Global Temperature\nAnomaly (deg. C)\n1951-1980 mean");
 		drawTemperatureGraduations(25, temperatureOffSet, 0, mCurrentMaxTemperature, temperatureScale);
 	}
 	if (seaLevelBarrel.size() > 0) {
-		drawText(vec3(-25, mTitlePosition, 0), 0, "Global Sea Level\n(mm)");
+		drawText(vec3(-25, mTitlePosition, -0.01), 0, "Global Sea Level\n(mm)");
 		drawSeaLevelGraduations(-25, seaLevelOffSet, 0, mCurrentMaxSeaLevel, seaLevelScale);
 	}
 	if (arcticSeaIceBarrel.size() > 0) {
-		drawText(vec3(-50, mTitlePosition, 0), 0, "Arctic Sea Ice\nAnomaly");
+		drawText(vec3(-50, mTitlePosition, -0.01), 0, "Arctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
 		drawSeaIceGraduations(-50, arcticOffSet, 0, mCurrentArcticSeaIceMinimum, mCurrentArcticSeaIceMaximum, arcticScale);
 	}
 	if (antarcticSeaIceBarrel.size() > 0) {
-		drawText(vec3(50, mTitlePosition, 0), 0, "Antarctic Sea Ice\nAnomaly");
+		drawText(vec3(50, mTitlePosition, -0.01), 0, "Antarctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
 		drawSeaIceGraduations(51, arcticOffSet, 0, mCurrentAntarcticSeaIceMinimum, mCurrentAntarcticSeaIceMaximum, arcticScale);
 	}
+
+	gl::setMatricesWindow(getWindowSize());
+	gl::color(1, 1, 1);
+	gl::draw(mTextTexture, vec2(10, getWindowSize().y - 35));
 }
 
 
@@ -412,10 +412,10 @@ void ClimateCorrelationApp::drawTemperatureGraduations(float x, float y, float z
 
 void ClimateCorrelationApp::drawSeaLevelGraduations(float x, float y, float z, float maximum, float scale) {
 	
-	for (int graduation = -180; graduation < maximum; graduation += 20) {
+	for (int graduation = 0; graduation < (maximum + 180); graduation += 20) {
 		char value[10];
 		sprintf(value, "%4d", graduation);
-		drawText(vec3(x + 12.0f, graduation * scale + y, z), 0, value, 0.7f, TextBox::RIGHT);
+		drawText(vec3(x + 12.0f, (graduation - 180) * scale + y, z), 0, value, 0.7f, TextBox::RIGHT);
 	}
 }
 
@@ -456,5 +456,5 @@ void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::stri
 
 
 CINDER_APP(ClimateCorrelationApp, RendererGl, [&](App::Settings *settings) {
-	settings->setWindowSize(960, 540); })
+	settings->setWindowSize(1920, 1080); })
 	
