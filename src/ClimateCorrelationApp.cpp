@@ -36,6 +36,8 @@ private:
 	float co2CylinderHeight;
 	string previousYearMonth;
 	string previousYearMonthDay;
+	float mTitlePosition;
+	int mYear;
 
 	struct BarrelSegment {
 		float angle;
@@ -117,6 +119,7 @@ void ClimateCorrelationApp::update()
 	float zoom = elapsedTime * 0.02f + 1.0f;
 	mCamera.lookAt(vec3(0.0f, 10.0f, 30.0f * zoom), vec3(0.0f, elapsedTime/10.0, 0.0f));
 
+	mTitlePosition = elapsedTime/2.5  + 10;
 
 	float time = elapsedTime * 2.0f + 1850.0f;
 	
@@ -166,7 +169,7 @@ void ClimateCorrelationApp::update()
 
 		}
 	}
-
+	
 	lineColor = Lerp::interpolate(Color(49.0 / 255.0, 163.0 / 255.0, 84.0 / 255.0), Color(229.0 / 255.0, 245.0 / 255.0, 224.0 / 255.0), animationFraction);
 
 	if (theDate.year >= 1880 && yearMonthHasChanged) {
@@ -200,10 +203,14 @@ void ClimateCorrelationApp::update()
 
 	}
 	char *txt;
-	if (theDate.year * 100 + theDate.month > 201710)
+	if (theDate.year * 100 + theDate.month > 201710) {
 		txt = "2017/11";
-	else
+		mYear = 2017;
+	}
+	else {
 		sprintf(txt, "%04d/%02d", theDate.year, theDate.month);
+		mYear = theDate.year;
+	}
 
 	TextBox tbox = TextBox().font(mFont).text(txt).size(400,40);
 	
@@ -242,15 +249,15 @@ void ClimateCorrelationApp::draw()
 	drawBarrel(arcticSeaIceBarrel, -50.0, arcticOffSet, 0, arcticScale);
 	drawBarrel(antarcticSeaIceBarrel, 50.0, arcticOffSet, 0, arcticScale);
 
-	drawText(vec3(0, 5, 0), 2, "hello world");
-
-	gl::setMatricesWindow(getWindowSize());
-	gl::color(1, 1, 1);
-	gl::draw(mTextTexture, vec2(10,10));
-	
-
-	//std::experimental::filesystem::v1::path p("frames/frame");
-	//writeImage( ("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
+	drawText(vec3(0, mTitlePosition, 0), 0, "Carbon Dioxide\nConcentration\n" + std::to_string(mYear) );
+	if (temperatureBarrel.size() > 0)
+		drawText(vec3(25, mTitlePosition, 0), 0, "Global Temperature");
+	if (seaLevelBarrel.size() > 0)
+		drawText(vec3(-25, mTitlePosition, 0), 0, "Global Sea Level");
+	if (arcticSeaIceBarrel.size() > 0)
+		drawText(vec3(-50, mTitlePosition, 0), 0, "Arctic Sea Ice\nAnomaly");
+	if (antarcticSeaIceBarrel.size() > 0)
+		drawText(vec3(50, mTitlePosition, 0), 0, "Antarctic Sea Ice\nAnomaly");
 }
 
 
@@ -278,18 +285,19 @@ void ClimateCorrelationApp::drawBarrel(vector<BarrelSegment> barrel, float x, fl
 		lastBarrelSegment = barrelSegment;
 	}
 
+
 }
 
 void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x, float y, float z, float scale) {
 
 	Co2Segment lastCo2Segment;
-
 	float currentMaxCo2 = 0;
 	for (auto &cylinderSegment : cylinder) {
 		if (cylinderSegment.height > currentMaxCo2)
-			currentMaxCo2 = cylinderSegment.height;
+			 currentMaxCo2 = cylinderSegment.height;
+		
 	}
-
+	
 	Surface co2TimeGradient(1, currentMaxCo2, false);
 
 	bool first = true;
@@ -329,7 +337,7 @@ void ClimateCorrelationApp::setPixels(Surface *surface, int from, int to, Color8
 
 void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text)
 {
-	TextBox tbox = TextBox().font(mFont).text(text);
+	TextBox tbox = TextBox().alignment(TextBox::CENTER).font(mFont).text(text);
 	gl::TextureRef textTexture = gl::Texture2d::create(tbox.render());
 	textTexture->bind();
 	vec2 textBoxSize = tbox.measure() * 0.1f;
@@ -338,6 +346,7 @@ void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::stri
 	gl::pushMatrices();
 	gl::rotate(angleAxis(angle,vec3(0,1,0)));
 	gl::translate(position);
+	gl::translate(vec3(-textBoxSize.x / 2.0f, 0, 0));
 	gl:rotate(2.0f, vec3(1, 0, 0));
 	gl::scale(vec2(1, -1));
 	auto shader = gl::ShaderDef().texture();// .lambert();
