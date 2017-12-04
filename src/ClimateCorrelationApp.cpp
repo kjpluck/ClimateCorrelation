@@ -106,6 +106,7 @@ Date GetDayFromFractionalYear(float time) {
 
 void ClimateCorrelationApp::setup()
 {
+	glLineWidth(3.0f);
 	setFullScreen(true);
 	gl::enableDepthRead();
 	gl::enableDepthWrite();

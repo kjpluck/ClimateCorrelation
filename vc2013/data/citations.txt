@@ -1,4 +1,6 @@
 Carbon Dioxide Concentration Data
+Etheridge, D., L. Steele, R. Langenfelds, R. Francey, J.Barnola, and V. Morgan 1996. 
+Natural and anthropogenic changes in atmospheric CO2 over the last 1000 years from air in Antarctic ice and firn. J. Geophys. Res 101, 4115-4128.
 C. D. Keeling, S. C. Piper, R. B. Bacastow, M. Wahlen, T. P. Whorf, M. Heimann, and H. A. Meijer, 
 Exchanges of atmospheric CO2 and 13CO2 with the terrestrial biosphere and oceans from 1978 to 2000. 
 I. Global aspects, SIO Reference Series, No. 01-06, Scripps Institution of Oceanography, San Diego, 88 pages, 2001.
