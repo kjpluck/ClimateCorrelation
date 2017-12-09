@@ -76,7 +76,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\..\cinder_0.9.0_vc2013\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\..\..\..\cinder_0.9.0_vc2013\include;D:/boost_1_58_0/boost_1_58_0</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32_WINNT=0x0601;_WINDOWS;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader />
@@ -92,7 +92,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>cinder-$(PlatformToolset).lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>"..\..\..\..\cinder_0.9.0_vc2013\lib\msw\$(PlatformTarget)"</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\boost_1_58_0\boost_1_58_0\stage\lib;..\..\..\..\cinder_0.9.0_vc2013\lib\msw\$(PlatformTarget)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
@@ -111,10 +111,12 @@
   <ItemGroup>
     <ClCompile Include="..\src\ClimateCorrelationApp.cpp" />
     <ClCompile Include="..\src\DataLoader.cpp" />
+    <ClCompile Include="..\src\DateUtils.cpp" />
     <ClCompile Include="..\src\Lerp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\DataLoader.h" />
+    <ClInclude Include="..\include\DateUtils.h" />
     <ClInclude Include="..\include\Lerp.h" />
     <ClInclude Include="..\include\Resources.h" />
   </ItemGroup>

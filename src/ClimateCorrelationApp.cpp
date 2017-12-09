@@ -2,6 +2,7 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
 #include "cinder\CinderGlm.h"
+#include <boost/date_time/gregorian/gregorian.hpp>
 #include <fstream>
 #include <math.h>
 #include <iomanip> // setprecision
@@ -10,10 +11,12 @@
 #include "Resources.h"
 #include "DataLoader.h"
 #include "Lerp.h"
+#include "DateUtils.h"
 
 using namespace ci;
 using namespace ci::app;
 using namespace std;
+using namespace boost::gregorian;
 
 
 
@@ -38,6 +41,7 @@ private:
 	Font				mFont;
 	string previousYearMonth;
 	string previousYearMonthDay;
+	date previousBoostDate;
 	float mTitlePosition;
 	int mYear;
 	float mCurrentMaxCo2;
@@ -157,6 +161,9 @@ void ClimateCorrelationApp::update()
 	Color lineColor = Lerp::interpolate(Color(117.0/255.0, 107.0/255.0 , 177.0/255.0), Color(239.0/255.0, 237.0/255.0, 245.0/255.0), animationFraction);
 
 	Date theDate = GetDayFromFractionalYear(time);
+
+	date boostDate(theDate.year, theDate.month, theDate.day);
+
 	float angleInBarrel = (theDate.month / 12.0f) * 2 * M_PI;
 
 	char yearMonth[8];
@@ -232,34 +239,47 @@ void ClimateCorrelationApp::update()
 		}
 	}
 
-	angleInBarrel = (time - (int)time) * 2 * M_PI;
+	int daysOfIce = 0;
 	if (yearMonthDayHasChanged && theDate.year >= 1978) {
 		animationFraction = (time - 1978.0f) / (2017.0f - 1978.0f);
-
 		// 49,130,189 -> 222,235,247
 		lineColor = Lerp::interpolate(Color(49.0 / 255.0, 130.0 / 255.0, 189.0 / 255.0), Color(222.0 / 255.0, 235.0 / 255.0, 247.0 / 255.0), animationFraction);
+		
+		date currentBoostDate(from_simple_string(previousYearMonthDay));
 
-		if (dailyArcticAreaData1978.count(yearMonthDay) == 1) {
 
-			float theArea = dailyArcticAreaData1978[yearMonthDay];
-			if (theArea > mCurrentArcticSeaIceMaximum)
-				mCurrentArcticSeaIceMaximum = theArea;
-			if (theArea < mCurrentArcticSeaIceMinimum)
-				mCurrentArcticSeaIceMinimum = theArea;
+		while (currentBoostDate <= boostDate) {
+			daysOfIce++;
+			
+			int dayOfYear = currentBoostDate.day_of_year();
+			angleInBarrel = (dayOfYear / 365.0f) * 2 * M_PI;
+			
+			string currentYearMonthDay = DateUtils::formatDate(currentBoostDate, "%Y-%m-%d");
 
-			BarrelSegment arcticAreaSegment = { angleInBarrel, dailyArcticAreaData1978[yearMonthDay], 1, lineColor };
-			arcticSeaIceBarrel.push_back(arcticAreaSegment);
-		}
-		if (dailyAntarcticAreaData1978.count(yearMonthDay) == 1) {
+			if (dailyArcticAreaData1978.count(currentYearMonthDay) == 1) {
 
-			float theArea = dailyAntarcticAreaData1978[yearMonthDay];
-			if (theArea > mCurrentAntarcticSeaIceMaximum)
-				mCurrentAntarcticSeaIceMaximum = theArea;
-			if (theArea < mCurrentAntarcticSeaIceMinimum)
-				mCurrentAntarcticSeaIceMinimum = theArea;
+				float theArea = dailyArcticAreaData1978[currentYearMonthDay];
+				if (theArea > mCurrentArcticSeaIceMaximum)
+					mCurrentArcticSeaIceMaximum = theArea;
+				if (theArea < mCurrentArcticSeaIceMinimum)
+					mCurrentArcticSeaIceMinimum = theArea;
 
-			BarrelSegment antarcticAreaSegment = { angleInBarrel, dailyAntarcticAreaData1978[yearMonthDay], 1, lineColor };
-			antarcticSeaIceBarrel.push_back(antarcticAreaSegment);
+				BarrelSegment arcticAreaSegment = { angleInBarrel, dailyArcticAreaData1978[currentYearMonthDay], 1, lineColor };
+				arcticSeaIceBarrel.push_back(arcticAreaSegment);
+			}
+			if (dailyAntarcticAreaData1978.count(currentYearMonthDay) == 1) {
+
+				float theArea = dailyAntarcticAreaData1978[currentYearMonthDay];
+				if (theArea > mCurrentAntarcticSeaIceMaximum)
+					mCurrentAntarcticSeaIceMaximum = theArea;
+				if (theArea < mCurrentAntarcticSeaIceMinimum)
+					mCurrentAntarcticSeaIceMinimum = theArea;
+
+				BarrelSegment antarcticAreaSegment = { angleInBarrel, dailyAntarcticAreaData1978[currentYearMonthDay], 1, lineColor };
+				antarcticSeaIceBarrel.push_back(antarcticAreaSegment);
+			}
+
+			currentBoostDate += days(1);
 		}
 
 	}
@@ -268,8 +288,8 @@ void ClimateCorrelationApp::update()
 		mYear = 2017;
 	else
 		mYear = theDate.year;
-
-	string selfPromo = "@kevpluck "; // +floatToStr(elapsedTime, 2);
+	
+	string selfPromo = "@kevpluck ";// +to_string(daysOfIce) + " "; // +floatToStr(elapsedTime, 2);
 	TextBox tbox = TextBox().font(mFont).text(selfPromo).size(400,40);
 	
 	mTextTexture = gl::Texture2d::create(tbox.render());
@@ -278,7 +298,10 @@ void ClimateCorrelationApp::update()
 		previousYearMonth = yearMonth;
 
 	if (yearMonthDayHasChanged)
+	{
 		previousYearMonthDay = yearMonthDay;
+		previousBoostDate = boostDate;
+	}
 }
 
 void ClimateCorrelationApp::draw()
@@ -337,7 +360,7 @@ void ClimateCorrelationApp::draw()
 	if (elapsedTime > 97)
 		drawCitations();
 
-	//writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
+	writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
 
 	if (elapsedTime > 103)
 		quit();
@@ -511,6 +534,8 @@ std::string ClimateCorrelationApp::floatToStr(float value, int precision) {
 	stream << fixed << setprecision(precision) << value;
 	return stream.str();
 }
+
+
 
 CINDER_APP(ClimateCorrelationApp, RendererGl, [&](App::Settings *settings) {
 	settings->setWindowSize(1920, 1080); })
