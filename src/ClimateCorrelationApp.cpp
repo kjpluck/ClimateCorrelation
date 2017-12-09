@@ -4,6 +4,8 @@
 #include "cinder\CinderGlm.h"
 #include <fstream>
 #include <math.h>
+#include <iomanip> // setprecision
+#include <sstream> // stringstream
 
 #include "Resources.h"
 #include "DataLoader.h"
@@ -67,15 +69,16 @@ private:
 	void drawSeaLevelGraduations(float x, float y, float z, float maximum, float scale);
 	void drawCo2Gradutations(float x, float y, float z, float scale);
 	void setPixels(Surface * surface, int from, int to, Color8u color);
-	void drawText(vec3 position, float angle, const std::string text, float = 1.0f, TextBox::Alignment = TextBox::CENTER);
-
+	void drawText(vec3 position, float angle, const std::string text, float = 1.0f, TextBox::Alignment = TextBox::CENTER, ColorA color = ColorA(1,1,1,1));
+	void fadeTextInOut(vec3 position, float angle, const std::string text, float fadeInTime, float duration, float scale = 1.0f, TextBox::Alignment alignment = TextBox::CENTER, Color color = Color(1, 1, 1));
+	std::string floatToStr(float value, int precision);
 	float mCurrentMaxSeaLevel;
 	float mCurrentMaxTemperature;
 	float mCurrentArcticSeaIceMinimum;
 	float mCurrentArcticSeaIceMaximum;
 	float mCurrentAntarcticSeaIceMinimum;
 	float mCurrentAntarcticSeaIceMaximum;
-
+	float elapsedTime;
 	string mCitations;
 };
 
@@ -140,7 +143,7 @@ void ClimateCorrelationApp::setup()
 
 void ClimateCorrelationApp::update()
 {
-	float elapsedTime = getElapsedFrames() / 30.0f;
+	elapsedTime = getElapsedFrames() / 30.0f;
 
 	float zoom = elapsedTime * 0.02f + 1.0f;
 	mCamera.lookAt(vec3(0.0f, 10.0f, 30.0f * zoom), vec3(0.0f, elapsedTime/10.0, 0.0f));
@@ -266,7 +269,7 @@ void ClimateCorrelationApp::update()
 	else
 		mYear = theDate.year;
 
-	TextBox tbox = TextBox().font(mFont).text("@kevpluck").size(400,40);
+	TextBox tbox = TextBox().font(mFont).text("@kevpluck " + floatToStr(elapsedTime, 2)).size(400,40);
 	
 	mTextTexture = gl::Texture2d::create(tbox.render());
 
@@ -321,21 +324,44 @@ void ClimateCorrelationApp::draw()
 		drawText(vec3(50, mTitlePosition, -0.01), 0, "Antarctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
 		drawSeaIceGraduations(51, arcticOffSet, 0, mCurrentAntarcticSeaIceMinimum, mCurrentAntarcticSeaIceMaximum, arcticScale);
 	}
+	if (co2Barrel.size() > 0) {
+		fadeTextInOut(vec3(0, 2.5, 10), 0, "Direct\nMeasurement\nMauna Loa", 54.0f, 5.0f, 0.7f, TextBox::CENTER, Color(0,0,0.15f));
+	}
+
 
 	gl::setMatricesWindow(getWindowSize());
 	gl::color(1, 1, 1);
 	gl::draw(mTextTexture, vec2(10, getWindowSize().y - 35));
 
-	if (getElapsedFrames() > 2700)
+	if (getElapsedFrames() > 2900)
 		drawCitations();
 
 	//writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
+
+	if (getElapsedFrames() > 3100)
+		quit();
+}
+
+void ClimateCorrelationApp::fadeTextInOut(vec3 position, float angle, const std::string text, float fadeInTime, float duration, float scale, TextBox::Alignment alignment, Color color) {
+	if (elapsedTime < fadeInTime || elapsedTime > fadeInTime + duration)
+		return;
+
+	float endTime = fadeInTime + duration;
+	float fade = 1.0f;
+	
+	if (elapsedTime - fadeInTime < 1.0f)
+		fade = (elapsedTime - fadeInTime) / 1.0;
+	if (elapsedTime > endTime - 1.0f)
+		fade = -(elapsedTime - endTime) / 1.0f;
+
+	ColorA fadeColor = ColorA(color, fade);
+	drawText(position, angle, text, scale, alignment, fadeColor);
 }
 
 void ClimateCorrelationApp::drawCitations() {
 	TextBox tbox = TextBox().font(mFont).text(mCitations).size(1720, 880).alignment(TextBox::CENTER);
 	tbox.setColor(Color(1, 1, 1));
-	tbox.setBackgroundColor(ColorA(0, 0, 0, 0.5));
+	tbox.setBackgroundColor(ColorA(0, 0, 0, 0.7));
 
 
 	gl::Texture2dRef textTexture = gl::Texture2d::create(tbox.render());
@@ -404,6 +430,12 @@ void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x
 	gl::BatchRef cylinderBatch = gl::Batch::create(co2Cylinder, glsl);
 	cylinderBatch->draw();
 	
+	float fadeOut = (30.0f - elapsedTime) / 30.0f;
+
+	if (fadeOut < 0.0f) 
+		return;
+
+	fadeTextInOut(vec3(x, iceCoreCo2Max * scale + y, z + 10.0f), 0, "Ice Core\nObservations\nAntarctica", 12.0f, 15.0f, 0.7f, TextBox::CENTER, Color(0, 0, 0.15f));
 }
 
 void ClimateCorrelationApp::drawSeaIceGraduations(float x, float y, float z, float minimum, float maximum, float scale) {
@@ -452,9 +484,9 @@ void ClimateCorrelationApp::setPixels(Surface *surface, int from, int to, Color8
 	}
 }
 
-void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text, float scale, TextBox::Alignment alignment)
+void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::string text, float scale, TextBox::Alignment alignment, ColorA color)
 {
-	TextBox tbox = TextBox().alignment(alignment).font(mFont).text(text);
+	TextBox tbox = TextBox().alignment(alignment).font(mFont).text(text).color(color);
 	gl::TextureRef textTexture = gl::Texture2d::create(tbox.render());
 	textTexture->bind();
 	vec2 textBoxSize = tbox.measure() * 0.1f * scale;
@@ -464,7 +496,6 @@ void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::stri
 	gl::rotate(angleAxis(angle,vec3(0,1,0)));
 	gl::translate(position);
 	gl::translate(vec3(-textBoxSize.x / 2.0f, 0, 0));
-	gl:rotate(2.0f, vec3(1, 0, 0));
 	gl::scale(vec2(1, -1));
 	auto shader = gl::ShaderDef().texture();// .lambert();
 	gl::GlslProgRef glsl = gl::getStockShader(shader);
@@ -474,6 +505,11 @@ void ClimateCorrelationApp::drawText(vec3 position, float angle, const std::stri
 	gl::popMatrices();
 }
 
+std::string ClimateCorrelationApp::floatToStr(float value, int precision) {
+	stringstream stream;
+	stream << fixed << setprecision(precision) << value;
+	return stream.str();
+}
 
 CINDER_APP(ClimateCorrelationApp, RendererGl, [&](App::Settings *settings) {
 	settings->setWindowSize(1920, 1080); })
