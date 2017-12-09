@@ -269,7 +269,8 @@ void ClimateCorrelationApp::update()
 	else
 		mYear = theDate.year;
 
-	TextBox tbox = TextBox().font(mFont).text("@kevpluck " + floatToStr(elapsedTime, 2)).size(400,40);
+	string selfPromo = "@kevpluck "; // +floatToStr(elapsedTime, 2);
+	TextBox tbox = TextBox().font(mFont).text(selfPromo).size(400,40);
 	
 	mTextTexture = gl::Texture2d::create(tbox.render());
 
@@ -333,12 +334,12 @@ void ClimateCorrelationApp::draw()
 	gl::color(1, 1, 1);
 	gl::draw(mTextTexture, vec2(10, getWindowSize().y - 35));
 
-	if (getElapsedFrames() > 2900)
+	if (elapsedTime > 97)
 		drawCitations();
 
 	//writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
 
-	if (getElapsedFrames() > 3100)
+	if (elapsedTime > 103)
 		quit();
 }
 
