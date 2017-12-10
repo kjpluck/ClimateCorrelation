@@ -2,6 +2,8 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
 #include "cinder\CinderGlm.h"
+#include "cinder/Timeline.h"
+#include "cinder/Easing.h"
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <fstream>
 #include <math.h>
@@ -45,6 +47,11 @@ private:
 	float mTitlePosition;
 	int mYear;
 	float mCurrentMaxCo2;
+	Anim<float> mEaseCo2Title = 20.0f;
+	Anim<float> mEaseSeaLevelTemperatureTitle = 20.0f;
+	bool mFirstFrameOfSeaLevelAndTemperature = true;
+	Anim<float> mEaseSeaIceTitle = 20.0f;
+	bool mFirstFrameOfSeaIce = true;
 
 	struct BarrelSegment {
 		float angle;
@@ -141,6 +148,8 @@ void ClimateCorrelationApp::setup()
 	mCurrentAntarcticSeaIceMinimum = 1000;
 	mCurrentArcticSeaIceMaximum = -1000;
 	mCurrentArcticSeaIceMinimum = 1000;
+	
+	timeline().apply(&mEaseCo2Title, 0.0f, 1.5f, EaseOutBack(1.1f));
 }
 
 
@@ -331,23 +340,39 @@ void ClimateCorrelationApp::draw()
 	drawBarrel(arcticSeaIceBarrel, -50.0, arcticOffSet, 0, arcticScale);
 	drawBarrel(antarcticSeaIceBarrel, 50.0, arcticOffSet, 0, arcticScale);
 
-	drawText(vec3(0, mTitlePosition, -0.01), 0, "Carbon Dioxide\nConcentration (ppm)\n" + std::to_string(mYear) );
+
+	drawText(vec3(0, mTitlePosition + mEaseCo2Title, -0.01), 0, "Carbon Dioxide\nConcentration (ppm)\n" + std::to_string(mYear) );
+	
 	if (temperatureBarrel.size() > 0) {
-		drawText(vec3(25, mTitlePosition, -0.01), 0, "Global Temperature\n1951-1980 mean\n(deg. C)");
+
+		if (mFirstFrameOfSeaLevelAndTemperature)
+		{
+			timeline().apply(&mEaseSeaLevelTemperatureTitle, 0.0f, 1.5f, EaseOutBack(1.1f));
+			mFirstFrameOfSeaLevelAndTemperature = false;
+		}
+		drawText(vec3(25, mTitlePosition + mEaseSeaLevelTemperatureTitle, -0.01), 0, "Global Temperature\n1951-1980 mean\n(deg. C)");
 		drawTemperatureGraduations(25, temperatureOffSet, 0, mCurrentMaxTemperature, temperatureScale);
 	}
+
 	if (seaLevelBarrel.size() > 0) {
-		drawText(vec3(-25, mTitlePosition, -0.01), 0, "Global Sea Level\n(mm)");
+		drawText(vec3(-25, mTitlePosition + mEaseSeaLevelTemperatureTitle, -0.01), 0, "Global Sea Level\n(mm)");
 		drawSeaLevelGraduations(-25, seaLevelOffSet, 0, mCurrentMaxSeaLevel, seaLevelScale);
 	}
+	
 	if (arcticSeaIceBarrel.size() > 0) {
-		drawText(vec3(-50, mTitlePosition, -0.01), 0, "Arctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
+		if (mFirstFrameOfSeaIce) {
+			timeline().apply(&mEaseSeaIceTitle, 0.0f, 1.5f, EaseOutBack(1.1f));
+			mFirstFrameOfSeaIce = false;
+		}
+		drawText(vec3(-50, mTitlePosition + mEaseSeaIceTitle, -0.01), 0, "Arctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
 		drawSeaIceGraduations(-50, arcticOffSet, 0, mCurrentArcticSeaIceMinimum, mCurrentArcticSeaIceMaximum, arcticScale);
 	}
+	
 	if (antarcticSeaIceBarrel.size() > 0) {
-		drawText(vec3(50, mTitlePosition, -0.01), 0, "Antarctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
+		drawText(vec3(50, mTitlePosition + mEaseSeaIceTitle, -0.01), 0, "Antarctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
 		drawSeaIceGraduations(51, arcticOffSet, 0, mCurrentAntarcticSeaIceMinimum, mCurrentAntarcticSeaIceMaximum, arcticScale);
 	}
+	
 	if (co2Barrel.size() > 0) {
 		fadeTextInOut(vec3(0, 2.5, 10), 0, "Direct\nMeasurement\nMauna Loa", 54.0f, 5.0f, 0.7f, TextBox::CENTER, Color(0,0,0.15f));
 	}
@@ -360,7 +385,7 @@ void ClimateCorrelationApp::draw()
 	if (elapsedTime > 97)
 		drawCitations();
 
-	writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
+	//writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
 
 	if (elapsedTime > 103)
 		quit();
@@ -459,7 +484,11 @@ void ClimateCorrelationApp::drawCo2Cylinder(vector<Co2Segment> cylinder, float x
 	if (fadeOut < 0.0f) 
 		return;
 
-	fadeTextInOut(vec3(x, iceCoreCo2Max * scale + y, z + 10.0f), 0, "Ice Core\nObservations\nAntarctica", 12.0f, 15.0f, 0.7f, TextBox::CENTER, Color(0, 0, 0.15f));
+	gl::pushMatrices();
+	gl::translate(vec3(x, iceCoreCo2Max * scale + y + 0.1, z - 2.0f));
+	gl::rotate(-M_PI / 2, vec3(1, 0, 0));
+	fadeTextInOut(vec3(0,0,0), 0, "Ice Core\nObservations\nAntarctica", 6.0f, 5.0f, 1, TextBox::CENTER, Color(0, 0, 0.15f));
+	gl::popMatrices();
 }
 
 void ClimateCorrelationApp::drawSeaIceGraduations(float x, float y, float z, float minimum, float maximum, float scale) {
