@@ -91,6 +91,9 @@ private:
 	float mCurrentAntarcticSeaIceMaximum;
 	float elapsedTime;
 	string mCitations;
+
+	Anim<float> afoo;
+	TimelineRef mTimeline = Timeline::create();
 };
 
 
@@ -148,14 +151,15 @@ void ClimateCorrelationApp::setup()
 	mCurrentAntarcticSeaIceMinimum = 1000;
 	mCurrentArcticSeaIceMaximum = -1000;
 	mCurrentArcticSeaIceMinimum = 1000;
-	
-	timeline().apply(&mEaseCo2Title, 0.0f, 1.5f, EaseOutBack(1.1f));
+
+	(*mTimeline).apply(&mEaseCo2Title, 0.0f, 1.5f, EaseOutBack(1.1f));
 }
 
 
 
 void ClimateCorrelationApp::update()
 {
+	(*mTimeline).step(1.0 / 30.0);
 	elapsedTime = getElapsedFrames() / 30.0f;
 
 	float zoom = elapsedTime * 0.02f + 1.0f;
@@ -347,7 +351,7 @@ void ClimateCorrelationApp::draw()
 
 		if (mFirstFrameOfSeaLevelAndTemperature)
 		{
-			timeline().apply(&mEaseSeaLevelTemperatureTitle, 0.0f, 1.5f, EaseOutBack(1.1f));
+			(*mTimeline).apply(&mEaseSeaLevelTemperatureTitle, 0.0f, 1.5f, EaseOutBack(1.1f));
 			mFirstFrameOfSeaLevelAndTemperature = false;
 		}
 		drawText(vec3(25, mTitlePosition + mEaseSeaLevelTemperatureTitle, -0.01), 0, "Global Temperature\n1951-1980 mean\n(deg. C)");
@@ -361,7 +365,7 @@ void ClimateCorrelationApp::draw()
 	
 	if (arcticSeaIceBarrel.size() > 0) {
 		if (mFirstFrameOfSeaIce) {
-			timeline().apply(&mEaseSeaIceTitle, 0.0f, 1.5f, EaseOutBack(1.1f));
+			(*mTimeline).apply(&mEaseSeaIceTitle, 0.0f, 1.5f, EaseOutBack(1.1f));
 			mFirstFrameOfSeaIce = false;
 		}
 		drawText(vec3(-50, mTitlePosition + mEaseSeaIceTitle, -0.01), 0, "Arctic Sea Ice\n1981-2010 mean\n(x10,000 sq. km)");
@@ -385,7 +389,7 @@ void ClimateCorrelationApp::draw()
 	if (elapsedTime > 97)
 		drawCitations();
 
-	//writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
+	writeImage(("frames/frame" + to_string(getElapsedFrames()) + ".png"), copyWindowSurface());
 
 	if (elapsedTime > 103)
 		quit();
